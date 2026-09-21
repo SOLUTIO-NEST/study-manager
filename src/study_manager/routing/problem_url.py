@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 class Judge(Enum):
     BOJ = "boj"
     CODEFORCES = "codeforces"
+    PROGRAMMERS = "programmers"
     JUNGOL = "jungol"
 
 
@@ -17,7 +18,9 @@ class ProblemRef:
     is_gym: bool = False
 
 
-def parse_problem_url(url: str) -> ProblemRef:
+def parse_problem_url(
+    url: str,
+) -> ProblemRef:
     parsed = urlparse(url)
 
     host = parsed.netloc.lower()
@@ -28,7 +31,10 @@ def parse_problem_url(url: str) -> ProblemRef:
     path = parsed.path.strip("/")
     parts = path.split("/")
 
+    # --------------------------------------------------
     # BOJ
+    # --------------------------------------------------
+
     if host == "acmicpc.net":
         if (
             len(parts) == 2
@@ -41,7 +47,10 @@ def parse_problem_url(url: str) -> ProblemRef:
                 url=url,
             )
 
+    # --------------------------------------------------
     # Codeforces
+    # --------------------------------------------------
+
     if host == "codeforces.com":
         # /problemset/problem/1324/F
         if (
@@ -99,7 +108,7 @@ def parse_problem_url(url: str) -> ProblemRef:
                 url=url,
                 is_gym=True,
             )
-        
+
         # /problemset/gymProblem/102644/C
         if (
             len(parts) == 4
@@ -117,6 +126,31 @@ def parse_problem_url(url: str) -> ProblemRef:
                 ),
                 url=url,
                 is_gym=True,
+            )
+
+    # --------------------------------------------------
+    # Programmers
+    # --------------------------------------------------
+
+    if host in {
+        "school.programmers.co.kr",
+        "programmers.co.kr",
+    }:
+        # /learn/courses/{course_id}/lessons/{lesson_id}
+        if (
+            len(parts) == 5
+            and parts[0] == "learn"
+            and parts[1] == "courses"
+            and parts[2].isdigit()
+            and parts[3] == "lessons"
+            and parts[4].isdigit()
+        ):
+            lesson_id = parts[4]
+
+            return ProblemRef(
+                judge=Judge.PROGRAMMERS,
+                problem_id=lesson_id,
+                url=url,
             )
 
     raise ValueError(
