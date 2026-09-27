@@ -1,0 +1,5 @@
+services:
+  bot:
+    image: solutionest/study-manager:latest
+    env_file: .env
+    restart: unless-stopped
