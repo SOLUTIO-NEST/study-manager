@@ -1,201 +1,204 @@
-## 새로운 Online Judge 추가하기
+# SOLUTIO Study Manager
 
-현재 Study Manager는 URL을 입력받아 해당 문제가 어느 Online Judge(OJ)에 속하는지 판별하고, OJ별 모듈을 통해 문제 메타데이터를 가져오는 구조로 되어 있습니다.
+SOLUTIO 알고리즘 스터디의 문제 등록 및 Notion 연동을 자동화하는 Discord Bot입니다.
 
-외부에서는 OJ 종류를 직접 신경 쓰지 않고 아래 함수만 사용합니다.
+Discord에서 스터디 URL과 문제 URL을 입력하면 각 Online Judge에서 문제 정보를 가져와 Notion 문제 DB에 등록하고, 스터디 Relation 및 OJ별 View를 자동으로 갱신합니다.
 
-```python
-problem = get_problem(url)
-```
+---
 
-새로운 OJ를 추가하려면 아래 순서대로 구현하면 됩니다.
+## 지원 Online Judge
 
-### 1. OJ 종류와 URL 파싱 추가
+- BOJ
+- Codeforces
+- Codeforces Gym
+- Programmers
 
-`src/study_manager/routing/problem_url.py`에서 `Judge` enum에 새로운 OJ를 추가합니다.
+---
 
-```python
-class Judge(Enum):
-    BOJ = "boj"
-    CODEFORCES = "codeforces"
-    EXAMPLE = "example"
-```
+## 관련 문서
 
-그다음 `parse_problem_url()`에서 해당 OJ의 문제 URL을 인식하도록 추가합니다.
+개발 및 운영에 필요한 상세 내용은 아래 문서를 참고하세요.
 
-```python
-if host in {"example.com", "www.example.com"}:
-    if ...:
-        return ProblemRef(
-            judge=Judge.EXAMPLE,
-            problem_id=...,
-            url=url,
-        )
-```
+- [새로운 Online Judge 추가 가이드](docs/ADDING_OJ.md)
+- [Notion 설정 및 운영 가이드](docs/NOTION_SETUP.md)
 
-`ProblemRef`는 URL을 분석한 결과만 나타냅니다.
+`ADDING_OJ.md`에는 새로운 OJ를 지원하기 위해 수정해야 할 코드와 테스트 절차가 정리되어 있습니다.
 
-```python
-@dataclass
-class ProblemRef:
-    judge: Judge
-    problem_id: str
-    url: str
-```
+`NOTION_SETUP.md`에는 Notion Integration, Data Source, 환경 변수, `NOTION_TOKEN` 관리 및 갱신 절차가 정리되어 있습니다.
 
-각 OJ의 문제 식별자가 반드시 정수일 필요는 없으므로 `problem_id`는 문자열을 사용합니다.
+---
 
-### 2. OJ별 모듈 생성
-
-`src/study_manager/judges/` 아래에 새로운 OJ 파일을 생성합니다.
-
-예:
+## 프로젝트 구조
 
 ```text
-judges/
-├─ boj.py
-├─ codeforces.py
-└─ example.py
+src/study_manager/
+├─ discord/          # Discord Bot UI
+├─ judges/           # OJ별 문제 정보 수집
+├─ notion/           # Notion API 연동
+├─ routing/          # 문제 URL 파싱
+├─ registration.py   # 문제 등록 전체 흐름
+└─ main.py           # 실행 진입점
 ```
 
-해당 파일에서 다음 내용을 구현합니다.
-
-- 해당 OJ 또는 관련 API에서 문제 메타데이터 조회
-- 해당 OJ에서 사용할 문제 데이터 구조 정의
-- `ProblemRef`를 받아 문제 정보를 반환하는 `get_problem()` 구현
-
-예:
-
-```python
-from dataclasses import dataclass
-
-from study_manager.routing.problem_url import Judge, ProblemRef
-
-
-@dataclass
-class ExampleProblem:
-    problem_id: str
-    title: str
-    difficulty: str | None
-    tags: list[str]
-    url: str
-
-
-def get_problem(ref: ProblemRef) -> ExampleProblem:
-    if ref.judge != Judge.EXAMPLE:
-        raise ValueError("Example OJ 문제가 아닙니다.")
-
-    # API 호출 또는 페이지 조회
-    # 필요한 데이터 가공
-
-    return ExampleProblem(
-        problem_id=ref.problem_id,
-        title=...,
-        difficulty=...,
-        tags=...,
-        url=ref.url,
-    )
-```
-
-각 OJ가 제공하는 정보는 서로 다르므로 기존 OJ와 동일한 데이터 포맷을 강제할 필요는 없습니다.
-
-예를 들어 BOJ와 Codeforces는 서로 다른 구조를 사용합니다.
+전체적인 문제 등록 흐름은 다음과 같습니다.
 
 ```text
-BojProblem
-├─ problem_id
-├─ title
-├─ tier
-├─ tags
-└─ url
+Discord
+   ↓
+URL Parsing
+   ↓
+OJ 문제 정보 수집
+   ↓
+Notion 문제 생성 / 갱신
+   ↓
+스터디 Relation 연결
+   ↓
+OJ별 View 갱신
 ```
 
-```text
-CodeforcesProblem
-├─ contest_id
-├─ index
-├─ title
-├─ rating
-├─ tags
-└─ url
+---
+
+## 개발 환경 설정
+
+Python 3.11 이상이 필요합니다.
+
+저장소를 clone합니다.
+
+```bash
+git clone <repository-url>
+cd study-manager
 ```
 
-새 OJ도 해당 OJ에 자연스러운 데이터 구조를 사용하면 됩니다.
+가상환경을 생성합니다.
 
-### 3. Dispatcher에 등록
-
-`src/study_manager/judges/__init__.py`에 새 OJ 모듈을 추가합니다.
-
-```python
-from study_manager.judges import boj, codeforces, example
+```bash
+python -m venv .venv
 ```
 
-그리고 `handlers`에 등록합니다.
+### Windows
 
-```python
-handlers = {
-    Judge.BOJ: boj.get_problem,
-    Judge.CODEFORCES: codeforces.get_problem,
-    Judge.EXAMPLE: example.get_problem,
-}
+```powershell
+.\.venv\Scripts\Activate.ps1
 ```
 
-이 과정을 완료하면 외부 코드에서는 기존과 동일하게 다음 코드만 사용하면 됩니다.
+PowerShell 실행 정책 때문에 실행되지 않는 경우:
 
-```python
-problem = get_problem(url)
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
 ```
 
-`get_problem()` 내부에서 URL을 분석하고 적절한 OJ 모듈을 자동으로 선택합니다.
+### Linux / macOS
 
-### 4. 동작 확인
-
-테스트할 문제 URL을 `main.py`에 추가합니다.
-
-```python
-urls = [
-    "https://...",
-]
+```bash
+source .venv/bin/activate
 ```
 
-프로젝트 루트에서 실행합니다.
+의존성을 설치합니다.
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+---
+
+## 환경 변수
+
+프로젝트 루트의 `.env.example`을 참고하여 `.env` 파일을 생성합니다.
+
+```env
+NOTION_TOKEN=
+NOTION_STUDY_DATA_SOURCE_ID=
+NOTION_BOJ_DATA_SOURCE_ID=
+NOTION_CODEFORCES_DATA_SOURCE_ID=
+NOTION_PROGRAMMERS_DATA_SOURCE_ID=
+
+DISCORD_BOT_TOKEN=
+DISCORD_GUILD_ID=
+```
+
+실제 Token이나 ID는 GitHub에 커밋하지 않습니다.
+
+`.env`는 로컬 개발 환경과 실제 배포 환경에서 각각 별도로 관리합니다.
+
+Notion 환경 변수의 의미, Integration 설정, Token 갱신 방법 등은 [Notion 설정 및 운영 가이드](docs/NOTION_SETUP.md)를 참고하세요.
+
+> **주의:** `NOTION_TOKEN`은 영구적인 값이 아니며 만료될 수 있습니다.  
+> 현재 운영 Token의 만료일과 갱신 절차는 `docs/NOTION_SETUP.md`에서 관리합니다.
+
+---
+
+## 실행
+
+가상환경이 활성화된 상태에서 실행합니다.
 
 ```bash
 python -m study_manager.main
 ```
 
-추가한 OJ의 문제 정보가 정상적으로 출력되면 기본 연동은 완료된 것입니다.
+정상적으로 실행되면 Discord Bot이 로그인되고 `/문제등록` 명령을 사용할 수 있습니다.
 
-### 5. Notion 연동 추가
+---
 
-OJ별 Notion 데이터베이스 구조는 서로 다를 수 있습니다.
+## 배포
 
-따라서 새로운 OJ를 추가할 때 기존 BOJ 또는 Codeforces 데이터베이스 구조에 맞추려고 하지 말고, 해당 OJ의 실제 데이터와 동아리 운영 방식에 맞게 저장 로직을 구현합니다.
+현재 프로젝트는 GitHub에 push된 코드를 기준으로 동아리 서버에 자동 배포됩니다.
 
-예:
+배포에는 GitHub Actions 및 Docker가 사용되고 있으므로 배포 구조를 수정할 경우 기존 workflow와 Docker 관련 설정을 먼저 확인하세요.
 
-```text
-notion/
-├─ boj.py
-├─ codeforces.py
-└─ example.py
-```
+일반적인 코드 수정은 GitHub에 push하면 자동으로 반영됩니다.
 
-각 모듈에서는 해당 OJ의 문제 객체를 해당 Notion 데이터베이스 속성에 맞게 변환합니다.
+단, 새로운 환경 변수를 추가한 경우에는 코드 push만으로는 충분하지 않습니다.
 
-### 설계 원칙
-
-이 프로젝트는 모든 OJ의 문제 정보를 하나의 공통 `Problem` 구조로 강제하지 않습니다.
-
-공통화하는 범위는 다음 정도로 제한합니다.
+예를 들어 새로운 OJ를 추가하여 다음 환경 변수가 생겼다면:
 
 ```text
-문제 URL
-→ OJ 판별
-→ OJ별 문제 정보 조회
-→ OJ별 문제 객체 반환
+NOTION_JUNGOL_DATA_SOURCE_ID
 ```
 
-OJ마다 문제 번호 체계, 난이도 체계, 태그, 대회 정보 등 제공하는 메타데이터가 다르기 때문에 각 OJ의 특성을 그대로 유지하는 것을 우선합니다.
+실제 배포 환경에도 해당 값을 별도로 추가해야 합니다.
 
-새로운 OJ를 추가할 때도 불필요한 공통화를 먼저 시도하기보다, 기존 `boj.py`, `codeforces.py`처럼 해당 OJ의 로직을 하나의 파일에서 이해할 수 있도록 구현하는 것을 권장합니다.
+Token이나 Data Source ID와 같은 비밀 값은 코드나 GitHub 저장소에 직접 작성하지 않습니다.
+
+---
+
+## 새로운 Online Judge 추가
+
+새로운 OJ 지원을 추가하는 방법은 [새 OJ 추가 가이드](docs/ADDING_OJ.md)를 참고하세요.
+
+OJ를 추가할 때는 대략 다음 영역을 수정하게 됩니다.
+
+```text
+URL Parser
+OJ 문제 정보 수집
+Notion 문제 DB 연동
+스터디 View
+Registration
+Discord 표시
+```
+
+구체적인 구현 절차와 테스트 체크리스트는 `ADDING_OJ.md`에 정리되어 있습니다.
+
+> **Tip:** 새로운 OJ를 추가할 때는 사용하는 LLM에게 이 저장소의 GitHub 주소와 [`docs/ADDING_OJ.md`](docs/ADDING_OJ.md)를 함께 제공하는 것을 권장합니다.
+>
+> 예시 프롬프트:
+>
+> `이 저장소의 현재 코드와 docs/ADDING_OJ.md를 읽고, <추가할 OJ 이름> 지원을 기존 구조에 맞게 구현해줘. 기존 OJ 구현을 참고하고 필요한 파일 수정과 테스트까지 진행해줘. 문서와 현재 코드가 다르면 현재 코드를 우선해서 판단해줘.`
+
+---
+
+## 문제 해결
+
+문제가 발생하면 증상에 따라 아래 영역부터 확인합니다.
+
+| 증상 | 우선 확인할 곳 |
+| --- | --- |
+| Discord Bot이 실행되지 않음 | `.env`의 Discord 설정, Discord Application/Bot 설정 |
+| 문제 URL을 인식하지 못함 | `src/study_manager/routing/problem_url.py` |
+| 특정 OJ의 문제 정보를 가져오지 못함 | `src/study_manager/judges/<oj>.py` |
+| Notion API 요청이 실패함 | [`docs/NOTION_SETUP.md`](docs/NOTION_SETUP.md) |
+| Notion 문제 속성이 잘못 저장됨 | `src/study_manager/notion/<oj>.py` |
+| Relation 또는 View가 이상함 | `src/study_manager/notion/relations.py`, `views.py`, `<oj>.py` |
+| 로컬에서는 되지만 서버에서는 안 됨 | 배포 환경 변수, GitHub Actions, Docker 및 배포 로그 |
+
+Notion 관련 문제는 Integration 권한, Data Source ID, Token 등 여러 설정이 관련되어 있으므로 자세한 내용은 [Notion 설정 및 운영 가이드](docs/NOTION_SETUP.md)를 참고하세요.
