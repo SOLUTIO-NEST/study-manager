@@ -6,6 +6,10 @@ from dataclasses import dataclass
 import httpx
 from curl_cffi import requests
 
+from study_manager.network import (
+    CODEFORCES_GATE,
+    request,
+)
 from study_manager.routing.problem_url import (
     ProblemRef,
 )
@@ -32,6 +36,14 @@ class CodeforcesProblem:
     is_gym: bool = False
 
 
+def clear_problemset_cache() -> None:
+    global _problemset_cache
+    global _problemset_cache_time
+
+    _problemset_cache = None
+    _problemset_cache_time = 0.0
+
+
 def _get_problemset() -> list[dict]:
     global _problemset_cache
     global _problemset_cache_time
@@ -45,7 +57,9 @@ def _get_problemset() -> list[dict]:
     ):
         return _problemset_cache
 
-    response = httpx.get(
+    response = request(
+        CODEFORCES_GATE,
+        httpx.get,
         (
             f"{CODEFORCES_API_URL}"
             "/problemset.problems"
@@ -107,7 +121,9 @@ def _get_problem_from_page(
             f"{contest_id}/{index}"
         )
 
-    response = requests.get(
+    response = request(
+        CODEFORCES_GATE,
+        requests.get,
         url,
         params={
             "locale": "en",

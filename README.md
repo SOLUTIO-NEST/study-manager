@@ -8,7 +8,7 @@ Discord에서 스터디 URL과 문제 URL을 입력하면 각 Online Judge에서
 
 ## 지원 Online Judge
 
-- BOJ
+- solved.ac (BOJ 및 연계 OJ 문제)
 - Codeforces
 - Codeforces Gym
 - Programmers
@@ -21,6 +21,7 @@ Discord에서 스터디 URL과 문제 URL을 입력하면 각 Online Judge에서
 
 - [새로운 Online Judge 추가 가이드](docs/ADDING_OJ.md)
 - [Notion 설정 및 운영 가이드](docs/NOTION_SETUP.md)
+- [solved.ac v4 API 연동 가이드](docs/SOLVEDAC_API.md)
 
 `ADDING_OJ.md`에는 새로운 OJ를 지원하기 위해 수정해야 할 코드와 테스트 절차가 정리되어 있습니다.
 
@@ -109,15 +110,24 @@ python -m pip install -e ".[dev]"
 ```env
 NOTION_TOKEN=
 NOTION_STUDY_DATA_SOURCE_ID=
-NOTION_BOJ_DATA_SOURCE_ID=
+NOTION_SOLVEDAC_DATA_SOURCE_ID=
 NOTION_CODEFORCES_DATA_SOURCE_ID=
 NOTION_PROGRAMMERS_DATA_SOURCE_ID=
 
 DISCORD_BOT_TOKEN=
 DISCORD_GUILD_ID=
+
+SOLVEDAC_CLIENT_ID=
+SOLVEDAC_CLIENT_SECRET=
 ```
 
 실제 Token이나 ID는 GitHub에 커밋하지 않습니다.
+
+`NOTION_SOLVEDAC_DATA_SOURCE_ID`에는 기존 백준 DB를 이름만 변경한 `solved.ac 데이터베이스`의 Data Source ID를 사용합니다. 기존 배포 설정의 `NOTION_BOJ_DATA_SOURCE_ID`도 호환됩니다.
+
+solved.ac v4 API는 [Backstage](https://backstage.solved.ac/developer/apps)에서 발급받은 앱 ID와 시크릿이 필요합니다. 기존 v3 API는 사용하지 않습니다.
+
+solved.ac 문제 URL(`https://solved.ac/p/1000`, `https://solved.ac/p/19917a`)과 백준·DOJ·정올의 숫자 문제 URL을 지원합니다. 연계 OJ의 문제도 같은 solved.ac DB에 저장하며, 스터디 View는 `솔브닥 N`으로 표시합니다. 세부 문제 구분과 기존 페이지 처리 방식은 [연동 가이드](docs/SOLVEDAC_API.md)를 참고하세요.
 
 `.env`는 로컬 개발 환경과 실제 배포 환경에서 각각 별도로 관리합니다.
 
@@ -137,6 +147,16 @@ python -m study_manager.main
 ```
 
 정상적으로 실행되면 Discord Bot이 로그인되고 `/문제등록` 명령을 사용할 수 있습니다.
+
+### 전체 문제 정보 갱신
+
+`/스터디관리`는 본인에게만 보이는 관리 메뉴를 엽니다. `운영진` 역할이 있는 사용자에게만 `데베 전체 초기화`, `진행 상황`, `갱신 중단` 버튼이 표시됩니다. 일반 사용자에게는 문제 등록 버튼만 표시됩니다.
+
+`데베 전체 초기화`는 문제를 삭제하지 않고 등록된 문제의 제목·난이도·태그를 갱신합니다. 실행 전 DB별 대상 개수를 확인하며, 풀이·본문·문제 번호·링크·스터디 Relation은 유지합니다.
+
+기본적으로 이름이 정확히 `운영진`인 역할을 확인합니다. 역할 ID를 지정하려면 `DISCORD_STAFF_ROLE_ID`를 설정합니다. 메뉴를 연 뒤 역할이 회수되면 실행할 수 없습니다.
+
+솔브닥·코포·프머 DB 모두 전체 갱신에 포함합니다. 호출 속도를 제한하고 중복 실행을 막으며, 종료 후 10분 동안 재실행을 제한합니다. 프로그래머스 요청은 최소 1초 간격으로 보냅니다.
 
 ---
 

@@ -61,9 +61,19 @@ def _problem_label(
             url
         )
 
-        if ref.judge == Judge.BOJ:
+        if ref.judge == Judge.SOLVEDAC:
             return (
-                f"백준 {ref.problem_id}"
+                f"solved.ac {ref.problem_id}"
+            )
+
+        if ref.judge in {
+            Judge.BOJ,
+            Judge.DOJ,
+            Judge.JUNGOL,
+        }:
+            return (
+                f"solved.ac ({ref.judge.value} "
+                f"{ref.problem_id})"
             )
 
         if ref.judge == Judge.CODEFORCES:
@@ -153,8 +163,8 @@ def render_result(
                 else "갱신"
             )
 
-            if problem.judge == Judge.BOJ:
-                judge_name = "백준"
+            if problem.judge == Judge.SOLVEDAC:
+                judge_name = "solved.ac"
 
             elif problem.judge == Judge.CODEFORCES:
                 judge_name = "코포"
@@ -226,7 +236,7 @@ class InitialRegistrationModal(
                 placeholder=(
                     "문제 URL을 한 줄에 "
                     "하나씩 입력하세요.\n"
-                    "백준 / 코포 / Gym / 프머"
+                    "solved.ac / 백준 / DOJ / 정올 / 코포 / Gym / 프머"
                 ),
                 required=False,
                 max_length=4000,

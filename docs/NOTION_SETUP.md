@@ -33,7 +33,7 @@ Notion API
 ```env
 NOTION_TOKEN=
 NOTION_STUDY_DATA_SOURCE_ID=
-NOTION_BOJ_DATA_SOURCE_ID=
+NOTION_SOLVEDAC_DATA_SOURCE_ID=
 NOTION_CODEFORCES_DATA_SOURCE_ID=
 NOTION_PROGRAMMERS_DATA_SOURCE_ID=
 ```
@@ -63,12 +63,20 @@ Notion API 요청 인증에 사용합니다.
 예:
 
 ```text
-NOTION_BOJ_DATA_SOURCE_ID
+NOTION_SOLVEDAC_DATA_SOURCE_ID
 NOTION_CODEFORCES_DATA_SOURCE_ID
 NOTION_PROGRAMMERS_DATA_SOURCE_ID
 ```
 
 새 OJ를 추가할 경우 해당 OJ의 Data Source ID 환경 변수도 추가합니다.
+
+### solved.ac 데이터베이스
+
+기존 `백준 데이터베이스`를 `solved.ac 데이터베이스`로 이름만 변경했다면 Data Source ID는 그대로 사용합니다. 배포 환경에 기존 `NOTION_BOJ_DATA_SOURCE_ID`만 있어도 동작하며, 새 이름인 `NOTION_SOLVEDAC_DATA_SOURCE_ID`를 설정하면 해당 값을 우선합니다.
+
+문제 번호(number), 이름(title), 티어(select), 태그(multi_select), 문제 링크(url), `📚 스터디 데이터베이스`(relation) 속성을 유지합니다. 세부 문제는 숫자 문제 번호와 solved.ac 문제 링크의 세부 번호로 구분합니다.
+
+기존 스터디의 View 이름을 한 번에 변경하는 방법과 solved.ac API 앱 설정은 [solved.ac v4 API 연동 가이드](SOLVEDAC_API.md)를 참고하세요.
 
 ---
 

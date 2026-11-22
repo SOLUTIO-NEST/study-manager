@@ -3,8 +3,12 @@ import os
 import httpx
 from dotenv import load_dotenv
 
-from study_manager.judges.boj import (
-    BojProblem,
+from study_manager.network import (
+    NOTION_GATE,
+    request,
+)
+from study_manager.judges.solvedac import (
+    SolvedacProblem,
 )
 from study_manager.notion.api import (
     NOTION_API_URL,
@@ -24,13 +28,22 @@ from study_manager.notion.views import (
     find_view_id,
     update_view,
 )
+from study_manager.routing.problem_url import (
+    Judge,
+    parse_problem_url,
+)
 
 
 load_dotenv()
 
-BOJ_DATA_SOURCE_ID = os.environ[
-    "NOTION_BOJ_DATA_SOURCE_ID"
-]
+SOLVEDAC_DATA_SOURCE_ID = (
+    os.getenv(
+        "NOTION_SOLVEDAC_DATA_SOURCE_ID"
+    )
+    or os.environ[
+        "NOTION_BOJ_DATA_SOURCE_ID"
+    ]
+)
 
 STUDY_RELATION_PROPERTY = (
     "📚 스터디 데이터베이스"
@@ -45,19 +58,14 @@ _custom_emoji_cache: dict[str, str] = {}
 
 
 def get_marker_name(
-    problem: BojProblem,
+    problem: SolvedacProblem,
 ) -> str:
-    if (
-        problem.sprout
-        and 1 <= problem.level <= 5
-    ):
-        return f"s{problem.level}"
-
     if problem.level == 0:
-        if problem.is_solvable:
-            return "00"
-
-        return "nr"
+        return (
+            "nr"
+            if problem.gives_no_rating
+            else "00"
+        )
 
     if problem.level == 31:
         return "31"
@@ -67,7 +75,7 @@ def get_marker_name(
 
     raise ValueError(
         "아이콘을 결정할 수 없는 "
-        f"BOJ 난이도입니다: {problem.level}"
+        f"solved.ac 난이도입니다: {problem.level}"
     )
 
 
@@ -82,7 +90,9 @@ def _load_custom_emojis() -> None:
         if start_cursor is not None:
             params["start_cursor"] = start_cursor
 
-        response = httpx.get(
+        response = request(
+            NOTION_GATE,
+            httpx.get,
             f"{NOTION_API_URL}/custom_emojis",
             headers=headers(),
             params=params,
@@ -124,7 +134,7 @@ def _get_custom_emoji_id(
 
 
 def _get_problem_icon(
-    problem: BojProblem,
+    problem: SolvedacProblem,
 ) -> dict:
     marker_name = get_marker_name(
         problem
@@ -148,7 +158,7 @@ def _get_problem_icon(
 
 
 def _build_metadata_properties(
-    problem: BojProblem,
+    problem: SolvedacProblem,
 ) -> dict:
     return {
         "이름": {
@@ -196,40 +206,121 @@ def _build_metadata_properties(
 
 
 def find_problem(
-    problem_id: int,
+    problem: SolvedacProblem,
 ) -> dict | None:
-    response = httpx.post(
-        (
-            f"{NOTION_API_URL}"
-            f"/data_sources/"
-            f"{BOJ_DATA_SOURCE_ID}"
-            f"/query"
-        ),
-        headers=headers(),
-        json={
-            "filter": {
+    # 기존 BOJ 페이지는 원래 번호로 찾고, 링크로 같은 문제인지 확인한다.
+    # solved.ac에서는 같은 문제 번호에 여러 세부 번호가 있을 수 있다.
+    boj_ids = {
+        item["problemId"]
+        for item in problem.judge_ids
+        if item["ojId"] == "boj"
+        and item["problemId"].isdigit()
+    }
+
+    problem_ids = {
+        int(problem_id)
+        for problem_id in boj_ids
+    }
+
+    problem_ids.add(
+        problem.problem_id
+    )
+
+    filters = [
+        {
+            "property": "문제 링크",
+            "url": {
+                "equals": problem.url,
+            },
+        },
+    ]
+
+    filters.extend(
+        [
+            {
                 "property": "문제 번호",
                 "number": {
                     "equals": problem_id,
                 },
-            },
-            "page_size": 1,
-        },
-        timeout=10.0,
+            }
+            for problem_id in sorted(problem_ids)
+        ]
     )
 
-    response.raise_for_status()
+    matches = {}
+    start_cursor = None
 
-    results = response.json()["results"]
+    while True:
+        body = {
+            "filter": {
+                "or": filters,
+            },
+            "page_size": 100,
+        }
 
-    if not results:
-        return None
+        if start_cursor is not None:
+            body["start_cursor"] = start_cursor
 
-    return results[0]
+        response = httpx.post(
+            (
+                f"{NOTION_API_URL}"
+                f"/data_sources/"
+                f"{SOLVEDAC_DATA_SOURCE_ID}"
+                f"/query"
+            ),
+            headers=headers(),
+            json=body,
+            timeout=10.0,
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        for page in data["results"]:
+            url = page["properties"]["문제 링크"]["url"]
+
+            try:
+                ref = parse_problem_url(
+                    url or ""
+                )
+            except ValueError:
+                raise ValueError(
+                    "기존 문제의 링크를 확인할 수 없습니다. "
+                    "Notion 문제 링크를 먼저 확인하세요: "
+                    f"{page['id']}"
+                )
+
+            if (
+                ref.judge == Judge.SOLVEDAC
+                and ref.problem_id == problem.display_id
+            ) or (
+                ref.judge == Judge.BOJ
+                and ref.problem_id in boj_ids
+            ):
+                matches[page["id"]] = page
+
+        if not data["has_more"]:
+            break
+
+        start_cursor = data["next_cursor"]
+
+    if len(matches) > 1:
+        raise ValueError(
+            "같은 solved.ac 문제에 해당하는 "
+            "기존 Notion 페이지가 여러 개 있습니다. "
+            "풀이와 Relation을 확인해 먼저 정리하세요: "
+            + ", ".join(matches)
+        )
+
+    return next(
+        iter(matches.values()),
+        None,
+    )
 
 
 def create_problem(
-    problem: BojProblem,
+    problem: SolvedacProblem,
 ) -> dict:
     response = httpx.post(
         f"{NOTION_API_URL}/pages",
@@ -238,7 +329,7 @@ def create_problem(
             "parent": {
                 "type": "data_source_id",
                 "data_source_id": (
-                    BOJ_DATA_SOURCE_ID
+                    SOLVEDAC_DATA_SOURCE_ID
                 ),
             },
 
@@ -266,9 +357,20 @@ def create_problem(
 
 def update_problem_metadata(
     page_id: str,
-    problem: BojProblem,
+    problem: SolvedacProblem,
+    preserve_identity: bool = False,
 ) -> dict:
-    response = httpx.patch(
+    properties = _build_metadata_properties(
+        problem
+    )
+
+    if preserve_identity:
+        properties.pop("문제 번호")
+        properties.pop("문제 링크")
+
+    response = request(
+        NOTION_GATE,
+        httpx.patch,
         f"{NOTION_API_URL}/pages/{page_id}",
         headers=headers(),
         json={
@@ -276,11 +378,7 @@ def update_problem_metadata(
                 problem
             ),
 
-            "properties": (
-                _build_metadata_properties(
-                    problem
-                )
-            ),
+            "properties": properties,
         },
         timeout=10.0,
     )
@@ -291,10 +389,10 @@ def update_problem_metadata(
 
 
 def save_problem(
-    problem: BojProblem,
+    problem: SolvedacProblem,
 ) -> tuple[dict, bool]:
     existing = find_problem(
-        problem.problem_id
+        problem
     )
 
     if existing is not None:
@@ -340,7 +438,7 @@ def _get_view_configuration() -> dict:
         (
             f"{NOTION_API_URL}"
             f"/data_sources/"
-            f"{BOJ_DATA_SOURCE_ID}"
+            f"{SOLVEDAC_DATA_SOURCE_ID}"
         ),
         headers=headers(),
         timeout=10.0,
@@ -411,7 +509,7 @@ def rebuild_study_view(
     problem_pages = (
         query_pages_by_relation(
             data_source_id=(
-                BOJ_DATA_SOURCE_ID
+                SOLVEDAC_DATA_SOURCE_ID
             ),
             property_name=(
                 STUDY_RELATION_PROPERTY
@@ -435,12 +533,12 @@ def rebuild_study_view(
     view_id = find_view_id(
         database_id=database_id,
         data_source_id=(
-            BOJ_DATA_SOURCE_ID
+            SOLVEDAC_DATA_SOURCE_ID
         ),
     )
 
     # 문제가 하나도 없으면
-    # BOJ View를 제거한다.
+    # solved.ac View를 제거한다.
     #
     # 단, 마지막 View라서 삭제할 수 없는 경우
     # delete_view()가 그냥 남겨둔다.
@@ -469,28 +567,28 @@ def rebuild_study_view(
         },
     ]
 
-    # 과거에 BOJ View가 삭제됐는데
-    # 나중에 BOJ 문제가 추가된 경우
+    # 과거에 solved.ac View가 삭제됐는데
+    # 나중에 solved.ac 문제가 추가된 경우
     if view_id is None:
         return create_view(
             database_id=database_id,
             data_source_id=(
-                BOJ_DATA_SOURCE_ID
+                SOLVEDAC_DATA_SOURCE_ID
             ),
-            name=f"백준 {problem_count}",
+            name=f"솔브닥 {problem_count}",
             filter_data=filter_data,
             sorts=sorts,
             configuration=(
                 _get_view_configuration()
             ),
 
-            # BOJ는 항상 앞쪽
+            # solved.ac는 항상 앞쪽
             position="start",
         )
 
     return update_view(
         view_id=view_id,
-        name=f"백준 {problem_count}",
+        name=f"솔브닥 {problem_count}",
         filter_data=filter_data,
         sorts=sorts,
         configuration=_get_view_configuration(),
@@ -503,7 +601,7 @@ def sync_study_view(
 ) -> dict:
     wait_for_relation(
         data_source_id=(
-            BOJ_DATA_SOURCE_ID
+            SOLVEDAC_DATA_SOURCE_ID
         ),
         property_name=(
             STUDY_RELATION_PROPERTY
@@ -520,7 +618,7 @@ def sync_study_view(
 
     if view is None:
         raise RuntimeError(
-            "BOJ View를 동기화하지 못했습니다."
+            "solved.ac View를 동기화하지 못했습니다."
         )
 
     return view

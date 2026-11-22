@@ -2,6 +2,10 @@
 
 이 문서는 `study-manager`에 새로운 Online Judge(OJ)를 추가하는 방법을 설명합니다.
 
+현재 BOJ·DOJ·정올은 `judges/solvedac.py`와 `notion/solvedac.py`를 공통으로 사용합니다. solved.ac에 연계된 OJ를 추가할 때는 별도 문제 DB나 View를 만들지 않습니다. solved.ac URL로 등록할 수 있으며, 해당 OJ 원본 URL도 지원하려면 URL parser와 공통 handler 연결을 추가합니다. 자세한 내용은 [solved.ac 연동 가이드](SOLVEDAC_API.md)를 참고하세요.
+
+아래의 정올 전용 모듈·DB 예시는 solved.ac와 별개로 수집하는 새 OJ를 구현하는 일반적인 예시입니다. 현재 정올 연동에 그대로 적용하지 않습니다.
+
 현재 프로젝트는 다음 흐름으로 동작합니다.
 
 ```text
@@ -26,7 +30,7 @@ Discord 결과 출력
 
 현재 지원 OJ는 다음과 같습니다.
 
-- BOJ
+- solved.ac (BOJ 및 연계 OJ 문제)
 - Codeforces
 - Codeforces Gym
 - Programmers
@@ -34,7 +38,7 @@ Discord 결과 출력
 새로운 OJ를 추가할 때는 기존 OJ 중 구조가 가장 비슷한 구현을 참고하는 것이 가장 빠릅니다.
 
 - 숫자 문제 ID + 난이도: `Programmers`
-- 숫자 문제 ID + 난이도 + 태그: `BOJ`
+- 문제 ID + 난이도 + 태그 및 OJ 번호 대응: `solved.ac`
 - 문자열 문제 ID, 여러 URL 형식, 특수 문제 유형: `Codeforces`
 
 ---
@@ -193,15 +197,16 @@ OJ마다 Problem 구조가 달라도 괜찮습니다.
 
 현재도 각 OJ는 서로 다른 정보를 가지고 있습니다.
 
-BOJ:
+solved.ac:
 
 ```text
 문제 번호
+세부 문제 번호
 제목
 티어
 태그
-새싹 여부
 레이팅 제외 여부
+원래 OJ 문제 번호
 ...
 ```
 
@@ -241,11 +246,11 @@ Level
 
 현재 프로젝트의 사례는 다음과 같습니다.
 
-## BOJ
+## solved.ac
 
-BOJ 자체에서 필요한 메타데이터를 직접 얻기 어렵기 때문에 `solved.ac`를 사용합니다.
+공식 v4 API에서 여러 OJ의 문제 메타데이터를 공통으로 가져옵니다.
 
-일반 HTTP 요청이 Cloudflare에 막힌 문제가 있었기 때문에 현재는 `curl_cffi`를 사용합니다.
+`httpx`를 사용하며, 앱의 `x-client-id`와 `x-client-secret` 헤더가 필요합니다. 원래 OJ 번호와 solved.ac 번호는 항상 같지 않으므로 API의 대응 정보를 확인합니다.
 
 ## Codeforces
 
@@ -288,7 +293,7 @@ response = requests.get(
 )
 ```
 
-일반적인 `httpx` 요청 등이 차단된다면 현재 BOJ/Programmers 구현처럼 `curl_cffi`를 사용할 수 있습니다.
+공식 API가 없는 사이트에서 일반적인 `httpx` 요청 등이 차단된다면 현재 Codeforces/Programmers 구현처럼 `curl_cffi`를 사용할 수 있습니다. solved.ac는 공식 v4 API를 사용합니다.
 
 ---
 
@@ -1550,8 +1555,8 @@ notion/programmers.py
 숫자 ID, 난이도, 태그 등이 있다면:
 
 ```text
-judges/boj.py
-notion/boj.py
+judges/solvedac.py
+notion/solvedac.py
 ```
 
 를 참고합니다.

@@ -1,10 +1,13 @@
+import re
 from dataclasses import dataclass
 from enum import Enum
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 
 class Judge(Enum):
+    SOLVEDAC = "solvedac"
     BOJ = "boj"
+    DOJ = "doj"
     CODEFORCES = "codeforces"
     PROGRAMMERS = "programmers"
     JUNGOL = "jungol"
@@ -32,6 +35,28 @@ def parse_problem_url(
     parts = path.split("/")
 
     # --------------------------------------------------
+    # solved.ac
+    # --------------------------------------------------
+
+    if host == "solved.ac":
+        if parts[0] in {"ko", "en", "ja"}:
+            parts = parts[1:]
+
+        if (
+            len(parts) == 2
+            and parts[0] == "p"
+            and re.fullmatch(
+                r"[1-9][0-9]*[a-zA-Z0-9_-]*",
+                parts[1],
+            )
+        ):
+            return ProblemRef(
+                judge=Judge.SOLVEDAC,
+                problem_id=parts[1],
+                url=url,
+            )
+
+    # --------------------------------------------------
     # BOJ
     # --------------------------------------------------
 
@@ -43,7 +68,54 @@ def parse_problem_url(
         ):
             return ProblemRef(
                 judge=Judge.BOJ,
-                problem_id=parts[1],
+                problem_id=str(int(parts[1])),
+                url=url,
+            )
+
+    # --------------------------------------------------
+    # solved.ac 연계 OJ
+    # --------------------------------------------------
+
+    if host == "doj.kr":
+        if parts[0] in {"ko", "en", "ja"}:
+            parts = parts[1:]
+
+        if (
+            len(parts) == 2
+            and parts[0] == "problems"
+            and parts[1].isdigit()
+        ):
+            return ProblemRef(
+                judge=Judge.DOJ,
+                problem_id=str(int(parts[1])),
+                url=url,
+            )
+
+    if host == "jungol.co.kr":
+        if (
+            len(parts) == 2
+            and parts[0] == "problem"
+            and parts[1].isdigit()
+        ):
+            return ProblemRef(
+                judge=Judge.JUNGOL,
+                problem_id=str(int(parts[1])),
+                url=url,
+            )
+
+        query = parse_qs(
+            parsed.query
+        )
+
+        if (
+            path == "bbs/board.php"
+            and query.get("bo_table") == ["pbank"]
+            and len(query.get("wr_id", [])) == 1
+            and query["wr_id"][0].isdigit()
+        ):
+            return ProblemRef(
+                judge=Judge.JUNGOL,
+                problem_id=str(int(query["wr_id"][0])),
                 url=url,
             )
 

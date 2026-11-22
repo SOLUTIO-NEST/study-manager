@@ -3,6 +3,10 @@ import os
 import httpx
 from dotenv import load_dotenv
 
+from study_manager.network import (
+    NOTION_GATE,
+    request,
+)
 from study_manager.judges.codeforces import (
     CodeforcesProblem,
 )
@@ -283,16 +287,23 @@ def create_problem(
 def update_problem_metadata(
     page_id: str,
     problem: CodeforcesProblem,
+    preserve_identity: bool = False,
 ) -> dict:
-    response = httpx.patch(
+    properties = _build_metadata_properties(
+        problem
+    )
+
+    if preserve_identity:
+        properties.pop("문제 번호")
+        properties.pop("문제 링크")
+
+    response = request(
+        NOTION_GATE,
+        httpx.patch,
         f"{NOTION_API_URL}/pages/{page_id}",
         headers=headers(),
         json={
-            "properties": (
-                _build_metadata_properties(
-                    problem
-                )
-            ),
+            "properties": properties,
         },
         timeout=10.0,
     )

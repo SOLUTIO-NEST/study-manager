@@ -1,7 +1,7 @@
 from study_manager.judges import (
-    boj,
     codeforces,
     programmers,
+    solvedac,
 )
 from study_manager.routing.problem_url import (
     Judge,
@@ -17,7 +17,10 @@ def get_problem(
     )
 
     handlers = {
-        Judge.BOJ: boj.get_problem,
+        Judge.SOLVEDAC: solvedac.get_problem,
+        Judge.BOJ: solvedac.get_problem,
+        Judge.DOJ: solvedac.get_problem,
+        Judge.JUNGOL: solvedac.get_problem,
         Judge.CODEFORCES: (
             codeforces.get_problem
         ),

@@ -1,9 +1,12 @@
 from dataclasses import dataclass
 
 from study_manager.judges import get_problem
-from study_manager.notion import boj as notion_boj
+from study_manager.judges.solvedac import (
+    SolvedacProblem,
+)
 from study_manager.notion import codeforces as notion_codeforces
 from study_manager.notion import programmers as notion_programmers
+from study_manager.notion import solvedac as notion_solvedac
 from study_manager.notion.study import get_study_page
 from study_manager.routing.problem_url import (
     Judge,
@@ -86,7 +89,10 @@ def _get_notion_handler(
     judge: Judge,
 ):
     handlers = {
-        Judge.BOJ: notion_boj,
+        Judge.SOLVEDAC: notion_solvedac,
+        Judge.BOJ: notion_solvedac,
+        Judge.DOJ: notion_solvedac,
+        Judge.JUNGOL: notion_solvedac,
         Judge.CODEFORCES: notion_codeforces,
         Judge.PROGRAMMERS: notion_programmers,
     }
@@ -113,9 +119,9 @@ def _rebuild_study_views(
         study_page_id
     )
 
-    # 기본 BOJ View를 갱신하거나
-    # BOJ 문제가 없으면 제거한다.
-    notion_boj.rebuild_study_view(
+    # 기본 solved.ac View를 갱신하거나
+    # solved.ac 문제가 없으면 제거한다.
+    notion_solvedac.rebuild_study_view(
         study_page_id
     )
 
@@ -195,6 +201,7 @@ def register(
     # --------------------------------------------------
 
     seen_problem_ids = set()
+    seen_solvedac_ids = set()
 
     for url in problem_urls:
         try:
@@ -221,8 +228,24 @@ def register(
                 url
             )
 
+            judge = ref.judge
+            problem_id = _display_problem_id(
+                ref
+            )
+
+            if isinstance(
+                problem,
+                SolvedacProblem,
+            ):
+                # 다른 OJ의 URL도 같은 solved.ac 문제라면 한 번만 등록한다.
+                if problem.display_id in seen_solvedac_ids:
+                    continue
+
+                judge = Judge.SOLVEDAC
+                problem_id = problem.display_id
+
             handler = _get_notion_handler(
-                ref.judge
+                judge
             )
 
             page, created = (
@@ -231,15 +254,16 @@ def register(
                 )
             )
 
+            if judge == Judge.SOLVEDAC:
+                seen_solvedac_ids.add(
+                    problem_id
+                )
+
             registered_problems.append(
                 RegisteredProblem(
                     url=url,
-                    judge=ref.judge,
-                    problem_id=(
-                        _display_problem_id(
-                            ref
-                        )
-                    ),
+                    judge=judge,
+                    problem_id=problem_id,
                     title=problem.title,
                     page_id=page["id"],
                     created=created,

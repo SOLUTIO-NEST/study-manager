@@ -4,6 +4,10 @@ from dataclasses import dataclass
 
 from curl_cffi import requests
 
+from study_manager.network import (
+    PROGRAMMERS_GATE,
+    request,
+)
 from study_manager.routing.problem_url import (
     ProblemRef,
 )
@@ -136,7 +140,9 @@ def get_problem(
         ref.problem_id
     )
 
-    response = requests.get(
+    response = request(
+        PROGRAMMERS_GATE,
+        requests.get,
         ref.url,
         impersonate="chrome",
         timeout=10,
