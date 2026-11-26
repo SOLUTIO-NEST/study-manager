@@ -59,11 +59,14 @@ def test_atcoder_registration_reuses_problem_across_contests(
         "rich_text": {"equals": "abc300_a"},
     }
     assert first_query == second_query
+    assert create.kwargs["json"]["template"] == {"type": "default"}
     assert create.kwargs["json"]["properties"]["문제 링크"] == {"url": original}
 
-    assert patch.call_args.kwargs["json"]["properties"] == {
-        "이름": {"title": [{"text": {"content": "N-choice question"}}]},
-        "난이도": {"number": 8},
+    assert patch.call_args.kwargs["json"] == {
+        "properties": {
+            "이름": {"title": [{"text": {"content": "N-choice question"}}]},
+            "난이도": {"number": 8},
+        },
     }
     assert resource.call_count == 3
 

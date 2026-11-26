@@ -91,9 +91,9 @@ Notion에 `AtCoder 데이터베이스`를 만들고 다음 속성을 추가합�
 | `난이도` | 숫자 (`number`) |
 | `📚 스터디 데이터베이스` | 기존 스터디 DB에 대한 관계형 (`relation`). 여러 페이지 연결 허용 |
 
-1. 새 DB의 연결 메뉴에서 `SOLUTIO Study Manager` Integration을 추가합니다.
+1. 새 DB의 연결 메뉴에서 `SOLUTIO Study Manager` Integration을 추가하고, 문제 생성 템플릿을 기본 템플릿으로 지정합니다.
 2. DB 설정의 `데이터 소스 관리`에서 `데이터 소스 ID 복사`를 선택합니다. 로컬 테스트는 로컬 `.env`에, 배포는 라즈베리파이의 `~/solutio-deploy/bot/.env`에 `NOTION_ATCODER_DATA_SOURCE_ID=<복사한 ID>`를 추가합니다.
-3. 배포 후 `/문제등록`에 테스트 스터디 URL과 `https://atcoder.jp/contests/abc300/tasks/abc300_a`를 넣어 등록하고, 스터디의 `AtCoder 1` 탭을 확인합니다.
+3. 배포 후 `/문제등록`에 테스트 스터디 URL과 `https://atcoder.jp/contests/abc300/tasks/abc300_a`를 넣어 등록하고, 스터디의 `앳코 1` 탭을 확인합니다.
 
 문제 번호는 `abc300_a` 같은 문자열입니다. 난이도는 [AtCoder Problems](https://github.com/kenkoooo/AtCoderProblems/blob/main/doc/api.md)의 추정치를 사용하며, 값이 없으면 비워 둡니다.
 

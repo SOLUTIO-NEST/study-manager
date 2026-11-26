@@ -120,6 +120,9 @@ def create_problem(
                 "type": "data_source_id",
                 "data_source_id": _get_data_source_id(),
             },
+            "template": {
+                "type": "default",
+            },
             "properties": _build_metadata_properties(
                 problem
             ),
@@ -279,7 +282,7 @@ def rebuild_study_view(
 
         return None
 
-    name = f"AtCoder {len(problem_pages)}"
+    name = f"앳코 {len(problem_pages)}"
     filter_data = {
         "property": STUDY_RELATION_PROPERTY,
         "relation": {
