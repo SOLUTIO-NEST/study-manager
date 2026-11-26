@@ -91,6 +91,11 @@ def _problem_label(
                 f"프머 {ref.problem_id}"
             )
 
+        if ref.judge == Judge.ATCODER:
+            return (
+                f"AtCoder {ref.problem_id}"
+            )
+
     except Exception:
         pass
 
@@ -172,6 +177,9 @@ def render_result(
             elif problem.judge == Judge.PROGRAMMERS:
                 judge_name = "프머"
 
+            elif problem.judge == Judge.ATCODER:
+                judge_name = "AtCoder"
+
             else:
                 judge_name = (
                     problem.judge.value
@@ -236,7 +244,7 @@ class InitialRegistrationModal(
                 placeholder=(
                     "문제 URL을 한 줄에 "
                     "하나씩 입력하세요.\n"
-                    "solved.ac / 백준 / DOJ / 정올 / 코포 / Gym / 프머"
+                    "solved.ac / 백준 / DOJ / 정올 / 코포 / Gym / 프머 / AtCoder"
                 ),
                 required=False,
                 max_length=4000,

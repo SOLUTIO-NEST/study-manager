@@ -140,4 +140,5 @@ def request(
 SOLVEDAC_GATE = RequestGate(0.6)
 CODEFORCES_GATE = RequestGate(2.1)
 PROGRAMMERS_GATE = RequestGate(1.0)
+ATCODER_GATE = RequestGate(1.1)
 NOTION_GATE = RequestGate(0.4)

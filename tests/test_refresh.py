@@ -241,7 +241,7 @@ def test_metadata_refresh_preserves_identity_and_user_data(
     }
 
 
-def test_all_three_databases_use_their_own_handlers(monkeypatch):
+def test_all_databases_use_their_own_handlers(monkeypatch):
     monkeypatch.setattr(
         refresh,
         "get_problem",
@@ -252,6 +252,7 @@ def test_all_three_databases_use_their_own_handlers(monkeypatch):
         refresh.solvedac,
         refresh.codeforces,
         refresh.programmers,
+        refresh.atcoder,
     ]
     updates = []
 
@@ -272,12 +273,13 @@ def test_all_three_databases_use_their_own_handlers(monkeypatch):
                     "솔브닥": [page("one", "https://solved.ac/p/1000")],
                     "코포": [page("two", "https://codeforces.com/contest/1324/problem/F")],
                     "프머": [page("three", "https://school.programmers.co.kr/learn/courses/30/lessons/118668")],
+                    "AtCoder": [page("four", "https://atcoder.jp/contests/abc300/tasks/abc300_a")],
                 },
             ),
         ),
     )
 
-    assert manager.snapshot().updated == 3
+    assert manager.snapshot().updated == 4
     for update in updates:
         update.assert_called_once()
         assert update.call_args.kwargs["preserve_identity"] is True

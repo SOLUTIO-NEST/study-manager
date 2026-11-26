@@ -11,6 +11,7 @@ class Judge(Enum):
     CODEFORCES = "codeforces"
     PROGRAMMERS = "programmers"
     JUNGOL = "jungol"
+    ATCODER = "atcoder"
 
 
 @dataclass(frozen=True)
@@ -223,6 +224,24 @@ def parse_problem_url(
                 judge=Judge.PROGRAMMERS,
                 problem_id=lesson_id,
                 url=url,
+            )
+
+    # --------------------------------------------------
+    # AtCoder
+    # --------------------------------------------------
+
+    if host == "atcoder.jp" and parsed.scheme in {"http", "https"}:
+        if (
+            len(parts) == 4
+            and parts[0] == "contests"
+            and parts[2] == "tasks"
+            and re.fullmatch(r"[a-zA-Z0-9_-]+", parts[1])
+            and re.fullmatch(r"[a-zA-Z0-9_-]+", parts[3])
+        ):
+            return ProblemRef(
+                judge=Judge.ATCODER,
+                problem_id=parts[3],
+                url=f"https://atcoder.jp/{path}",
             )
 
     raise ValueError(

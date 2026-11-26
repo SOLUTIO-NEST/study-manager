@@ -12,6 +12,7 @@ for name in [
     "NOTION_SOLVEDAC_DATA_SOURCE_ID",
     "NOTION_CODEFORCES_DATA_SOURCE_ID",
     "NOTION_PROGRAMMERS_DATA_SOURCE_ID",
+    "NOTION_ATCODER_DATA_SOURCE_ID",
     "SOLVEDAC_CLIENT_ID",
     "SOLVEDAC_CLIENT_SECRET",
 ]:
@@ -24,6 +25,7 @@ def block_network(monkeypatch):
         network.SOLVEDAC_GATE,
         network.CODEFORCES_GATE,
         network.PROGRAMMERS_GATE,
+        network.ATCODER_GATE,
         network.NOTION_GATE,
     ]:
         monkeypatch.setattr(gate, "interval", 0.0)

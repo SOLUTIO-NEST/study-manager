@@ -4,6 +4,7 @@ from study_manager.judges import get_problem
 from study_manager.judges.solvedac import (
     SolvedacProblem,
 )
+from study_manager.notion import atcoder as notion_atcoder
 from study_manager.notion import codeforces as notion_codeforces
 from study_manager.notion import programmers as notion_programmers
 from study_manager.notion import solvedac as notion_solvedac
@@ -95,6 +96,7 @@ def _get_notion_handler(
         Judge.JUNGOL: notion_solvedac,
         Judge.CODEFORCES: notion_codeforces,
         Judge.PROGRAMMERS: notion_programmers,
+        Judge.ATCODER: notion_atcoder,
     }
 
     handler = handlers.get(judge)
@@ -119,6 +121,10 @@ def _rebuild_study_views(
         study_page_id
     )
 
+    notion_atcoder.rebuild_study_view(
+        study_page_id
+    )
+
     # 기본 solved.ac View를 갱신하거나
     # solved.ac 문제가 없으면 제거한다.
     notion_solvedac.rebuild_study_view(
@@ -132,6 +138,10 @@ def _rebuild_study_views(
     )
 
     notion_programmers.rebuild_study_view(
+        study_page_id
+    )
+
+    notion_atcoder.rebuild_study_view(
         study_page_id
     )
 
@@ -220,10 +230,6 @@ def register(
             if key in seen_problem_ids:
                 continue
 
-            seen_problem_ids.add(
-                key
-            )
-
             problem = get_problem(
                 url
             )
@@ -252,6 +258,10 @@ def register(
                 handler.save_problem(
                     problem
                 )
+            )
+
+            seen_problem_ids.add(
+                key
             )
 
             if judge == Judge.SOLVEDAC:

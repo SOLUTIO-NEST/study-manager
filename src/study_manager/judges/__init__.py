@@ -1,4 +1,5 @@
 from study_manager.judges import (
+    atcoder,
     codeforces,
     programmers,
     solvedac,
@@ -27,6 +28,7 @@ def get_problem(
         Judge.PROGRAMMERS: (
             programmers.get_problem
         ),
+        Judge.ATCODER: atcoder.get_problem,
     }
 
     handler = handlers.get(

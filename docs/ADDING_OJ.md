@@ -34,6 +34,7 @@ Discord 결과 출력
 - Codeforces
 - Codeforces Gym
 - Programmers
+- AtCoder
 
 새로운 OJ를 추가할 때는 기존 OJ 중 구조가 가장 비슷한 구현을 참고하는 것이 가장 빠릅니다.
 
@@ -62,6 +63,7 @@ Discord 결과 출력
 | Codeforces | `1324F` |
 | Codeforces Gym | `G-102644C` |
 | Programmers | `118668` |
+| AtCoder | `abc300_a` |
 
 문제 제목을 ID로 사용하지 않습니다.
 
@@ -263,6 +265,10 @@ Codeforces 문제 제목이 러시아어 등 다른 언어로 내려오는 것�
 ## Programmers
 
 공개 문제 페이지를 parsing하여 Lesson ID, 제목, Level 등을 가져옵니다.
+
+## AtCoder
+
+[AtCoder Problems의 공개 데이터](https://github.com/kenkoooo/AtCoderProblems/blob/main/doc/api.md)에서 제목과 추정 난이도를 가져옵니다. 같은 문제가 여러 대회에 등장해도 URL의 `abc300_a` 같은 문제 ID로 구분합니다. Notion DB는 [AtCoder 데이터베이스 설정](NOTION_SETUP.md#atcoder-데이터베이스)을 참고하세요.
 
 ---
 

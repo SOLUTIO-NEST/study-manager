@@ -5,12 +5,14 @@ from dataclasses import dataclass, field
 import httpx
 
 from study_manager.judges import get_problem
+from study_manager.judges import atcoder as judge_atcoder
 from study_manager.judges import codeforces as judge_codeforces
 from study_manager.network import (
     NOTION_GATE,
     request,
 )
 from study_manager.notion import (
+    atcoder,
     codeforces,
     programmers,
     solvedac,
@@ -45,6 +47,11 @@ DATABASES = {
         programmers.PROGRAMMERS_DATA_SOURCE_ID,
         programmers,
         {Judge.PROGRAMMERS},
+    ),
+    "AtCoder": (
+        atcoder.ATCODER_DATA_SOURCE_ID,
+        atcoder,
+        {Judge.ATCODER},
     ),
 }
 
@@ -89,6 +96,9 @@ def build_refresh_plan() -> RefreshPlan:
     pages = {}
 
     for name, (source_id, _, _) in DATABASES.items():
+        if not source_id:
+            continue
+
         pages[name] = []
         start_cursor = None
 
@@ -209,6 +219,9 @@ class RefreshManager:
 
         try:
             judge_codeforces.clear_problemset_cache()
+
+            if job.plan.pages.get("AtCoder"):
+                judge_atcoder.clear_metadata_cache()
 
             for name, pages in job.plan.pages.items():
                 _, handler, judges = DATABASES[name]

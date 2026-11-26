@@ -12,6 +12,7 @@ Discord에서 스터디 URL과 문제 URL을 입력하면 각 Online Judge에서
 - Codeforces
 - Codeforces Gym
 - Programmers
+- AtCoder
 
 ---
 
@@ -113,6 +114,7 @@ NOTION_STUDY_DATA_SOURCE_ID=
 NOTION_SOLVEDAC_DATA_SOURCE_ID=
 NOTION_CODEFORCES_DATA_SOURCE_ID=
 NOTION_PROGRAMMERS_DATA_SOURCE_ID=
+NOTION_ATCODER_DATA_SOURCE_ID=
 
 DISCORD_BOT_TOKEN=
 DISCORD_GUILD_ID=
@@ -156,7 +158,7 @@ python -m study_manager.main
 
 기본적으로 이름이 정확히 `운영진`인 역할을 확인합니다. 역할 ID를 지정하려면 `DISCORD_STAFF_ROLE_ID`를 설정합니다. 메뉴를 연 뒤 역할이 회수되면 실행할 수 없습니다.
 
-솔브닥·코포·프머 DB 모두 전체 갱신에 포함합니다. 호출 속도를 제한하고 중복 실행을 막으며, 종료 후 10분 동안 재실행을 제한합니다. 프로그래머스 요청은 최소 1초 간격으로 보냅니다.
+솔브닥·코포·프머와 설정된 AtCoder DB를 전체 갱신에 포함합니다. 호출 속도를 제한하고 중복 실행을 막으며, 종료 후 10분 동안 재실행을 제한합니다. 프로그래머스 요청은 최소 1초 간격으로 보냅니다.
 
 ---
 
